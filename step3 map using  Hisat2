@@ -1,0 +1,19 @@
+srun --cpus-per-task=4 --mem-per-cpu=15G --time=15:00:00 --pty bash
+#!/usr/bin/env bash
+
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=15G
+#SBATCH --time=15:00:00
+#SBATCH --job-name=mapping
+#SBATCH --mail-user=zhihui.wang@students.unibe.ch
+#SBATCH --mail-type=begin,end
+#SBATCH --output=/data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/output_mapping_%j.o
+#SBATCH --error=/data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/error_mapping_%j.e
+
+module add UHTS/Aligner/hisat/2.2.1
+
+
+for reads in `du -sh /data/courses/rnaseq/breastcancer_de/reads/* | cut -d '/' -f7 | cut -d '.' -f1 | cut -d '_' -f1 | sort | uniq`
+do
+hisat2  -p 4 -x hg38 -1 /data/courses/rnaseq/breastcancer_de/reads/${reads}_R1.fastq.gz -2 /data/courses/rnaseq/breastcancer_de/reads/${reads}_R2.fastq.gz -S /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.sam
+done
