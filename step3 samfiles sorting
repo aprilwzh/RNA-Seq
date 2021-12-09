@@ -15,5 +15,5 @@ module add UHTS/Analysis/samtools/1.10
 
 for reads in `du -sh /data/courses/rnaseq/breastcancer_de/reads/* | cut -d '/' -f7 | cut -d '.' -f1 | cut -d '_' -f1 | sort | uniq`
 do
-samtools sort -@ 4 -o /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.bam /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out_sorted.bam
+samtools sort -@ 4 -o /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}.bam /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.bam
 done
