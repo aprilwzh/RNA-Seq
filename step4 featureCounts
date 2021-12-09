@@ -2,15 +2,13 @@
 
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=4G
-#SBATCH --time=13:00:00
+#SBATCH --time=30:00:00
 #SBATCH --job-name=featureCounts
-#SBATCH --output=/PATH/featureCounts/output_%j.o
-#SBATCH --error=/PATH/featureCounts/error_%j.e
+#SBATCH --mail-user=zhihui.wang@students.unibe.ch
+#SBATCH --mail-type=begin,end
+#SBATCH --output=/data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping//output_%j.o
+#SBATCH --error=/data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping//error_%j.e
 
 module add UHTS/Analysis/subread/2.0.1
 cd /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/
-featureCounts -T 4 -a /data/courses/rnaseq/breastcancer_de/gtf_data/Homo_sapiens.GRCh38.104.gtf -o featureCounts.txt *out_sorted.bam
-
-
-#featureCounts -T 4 -a /data/courses/rnaseq/breastcancer_de/gtf_data/Homo_sapiens.GRCh38.104.gtf -o featureCounts.txt ./Map_to_ref_HER21/mappedReads_SAMPLE1.bam ./Map_to_ref_HER22/mappedReads_SAMPLE2.bam
-#Homo_sapiens.GRCh38.104.gtf.gz
+featureCounts -T 4 -a /data/courses/rnaseq/breastcancer_de/gtf_data/Homo_sapiens.GRCh38.104.gtf.gz -o featureCounts.txt *.bam
