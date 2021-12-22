@@ -1,1 +1,22 @@
+###fastqc deal with data
+srun --cpus-per-task=4 --mem-per-cpu=2000M --time=10:00:00 --pty bash
+#!/usr/bin/env bash
 
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=15G
+#SBATCH --time=15:00:00
+#SBATCH --job-name=fastqc
+#SBATCH --mail-user=zhihui.wang@students.unibe.ch
+#SBATCH --mail-type=begin,end
+#SBATCH --output=/home/zwang/output_mapping_%j.o
+#SBATCH --error=/home/zwang/error_mapping_%j.e
+
+module add UHTS/Quality_control/fastqc/0.11.9
+cd /data/courses/rnaseq/breastcancer_de
+for i in `du -sh /data/courses/rnaseq/breastcancer_de/reads/* | cut -d '/' -f7 | cut -d '.' -f1 | cut -d '_' -f1 | sort | uniq`
+
+do mkdir /data/courses/rnaseq/breastcancer_de/zwang_workspace/fastqc/$i
+
+fastqc -o /data/courses/rnaseq/breastcancer_de/zwang_workspace/fastqc/$i -t 4 /data/courses/rnaseq/breastcancer_de/reads/${i}_R1.fastq.gz /data/courses/rnaseq/breastcancer_de/reads/${i}_R2.fastq.gz 
+
+done
