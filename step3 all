@@ -1,1 +1,33 @@
+#!/usr/bin/env bash
 
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=15G
+#SBATCH --time=60:00:00
+#SBATCH --job-name=map_all
+#SBATCH --mail-user=zhihui.wang@students.unibe.ch
+#SBATCH --mail-type=begin,end
+#SBATCH --output=/home/zwang/output_mapping_%j.o
+#SBATCH --error=/home/zwang/error_mapping_%j.e
+
+module add UHTS/Analysis/samtools/1.10
+module add UHTS/Aligner/hisat/2.2.1
+#Produce all required index files
+cd /data/courses/rnaseq/breastcancer_de/zwang_workspace/genome_index
+gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+hisat2-build -p 4 Homo_sapiens.GRCh38.dna.primary_assembly.fa hg38
+
+for reads in `du -sh /data/courses/rnaseq/breastcancer_de/reads/* | cut -d '/' -f7 | cut -d '.' -f1 | cut -d '_' -f1 | sort | uniq`
+do
+#map the reads to the reference genome using Hisat2
+hisat2  -p 4 -x /data/courses/rnaseq/breastcancer_de/zwang_workspace/genome_index/hg38 -1 /data/courses/rnaseq/breastcancer_de/reads/${reads}_R1.fastq.gz -2 /data/courses/rnaseq/breastcancer_de/reads/${reads}_R2.fastq.gz -S /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.sam
+
+#Convert the resulting sam files to bam format using Samtools
+samtools view -b -@ 4 -t /data/courses/rnaseq/breastcancer_de/genome_reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.sam > /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.bam
+
+#Sort the bam files by genomic coordinates using Samtools
+samtools sort -@ 4 -o /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}.bam /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}out.bam
+
+#Index the coordinate sorted bam files using Samtools
+samtools index  /data/courses/rnaseq/breastcancer_de/zwang_workspace/mapping/${reads}.bam
+
+done
