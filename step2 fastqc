@@ -1,5 +1,6 @@
 ###fastqc deal with data
 srun --cpus-per-task=4 --mem-per-cpu=2000M --time=10:00:00 --pty bash
+##below is bash script
 #!/usr/bin/env bash
 
 #SBATCH --cpus-per-task=4
@@ -20,3 +21,9 @@ do mkdir /data/courses/rnaseq/breastcancer_de/zwang_workspace/fastqc/$i
 fastqc -o /data/courses/rnaseq/breastcancer_de/zwang_workspace/fastqc/$i -t 4 /data/courses/rnaseq/breastcancer_de/reads/${i}_R1.fastq.gz /data/courses/rnaseq/breastcancer_de/reads/${i}_R2.fastq.gz 
 
 done
+
+#end
+##multiqc
+module add UHTS/Analysis/MultiQC/1.8
+##run in the fastqc result file
+multiqc .
