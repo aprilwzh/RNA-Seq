@@ -1,0 +1,114 @@
+library("DESeq2")
+library('clusterProfiler')
+library('org.Hs.eg.db')
+library('enrichplot')
+library('ggplot2')
+
+# construct countData
+data <- read.table('featureCounts.txt', header = TRUE)
+head(data)
+newdata <- data[,-2:-6]
+rownames(newdata)<-newdata[,1] 
+newdata <- newdata[,-1]
+head(newdata)
+#colData
+name <- data.frame(group = c('HER','HER','HER','NonTNBC','NonTNBC','NonTNBC'
+                             ,'Normal','Normal','Normal','TNBC','TNBC','TNBC'))
+rownames(name) <- (sample = colnames(newdata))
+#create the DES matrix
+dds <- DESeqDataSetFromMatrix(countData = newdata,
+                              colData = name,
+                              design = ~group)
+dds_out <- DESeq(dds)
+dds_vst<- vst(dds, blind = TRUE)
+# Generate PCA plot
+plotPCA(dds_vst, intgroup = 'group')
+
+
+#####################################################
+# 6. Differential expression analysis
+
+NonTNBC_Normal<-DESeq2::results(dds_out, contrast = c('group','NonTNBC','Normal'))
+TNBC_Normal<-DESeq2::results(dds_out, contrast = c('group','TNBC','Normal'))
+HER_Normal<-DESeq2::results(dds_out, contrast = c('group','HER','Normal'))
+
+# Calculation of differentially expressed genes in the pairwise comparisons, padj<0.05
+length(which(NonTNBC_Normal$padj <= 0.05)) 
+#14646
+
+length(which(TNBC_Normal$padj <= 0.05))
+# 17686
+
+length(which(HER_Normal$padj <= 0.05))
+# 15419
+
+# How many of the DE genes are up-regulated and down-regulated?
+DESeq2::resultsNames(dds_out)
+
+HER_Normal <- DESeq2::results(dds_out,contrast = c('group', 'HER','Normal'))
+
+
+NonTNBC_Normal <- DESeq2::results(dds_out, c('group','NonTNBC', 'Normal'))
+
+TNBC_Normal <- DESeq2::results(dds_out, c('group','TNBC', 'Normal'))
+
+
+
+summary(HER_Normal, alpha = 0.05)
+
+summary(NonTNBC_Normal, alpha = 0.05)
+
+summary(TNBC_Normal, alpha = 0.05)
+
+
+
+
+
+# Interesting genes from the paper
+
+##Gene1 HRAS
+HRAS <- 'ENSG00000174775'
+### Log 2 fold change in different sample comparisons
+HER_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
+TNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
+NonTNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
+
+# Gene2 RAB21 
+RAB21 <- 'ENSG00000080371'
+### Log 2 fold change in different sample comparisons
+HER_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
+TNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
+NonTNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
+
+
+
+##########
+# 7- Overrepresentation analysis
+# List of genes with p values above 1.0e-5 in HER_Normal
+ID <- rownames(HER_Normal[which(HER_Normal$pvalue < 1.0e-5),])
+k <- keys(org.Hs.eg.db, keytype = "ENSEMBL")
+list <- AnnotationDbi::select(org.Hs.eg.db,keys=k,columns = c("ENTREZID","SYMBOL"), keytype="ENSEMBL")
+dim(list)
+
+#start to replace
+ID_list = list[match(ID, list[, "ENSEMBL"]), ]
+ID_list = ID_list[complete.cases(ID_list),]
+
+
+lapply( c('BP','MF','CC') , function(ac) {
+  ego <- enrichGO(gene          = ID_list$ENTREZID,
+                  #universe      = gene_all,
+                  OrgDb         = org.Hs.eg.db,
+                  ont           = ac ,
+                  pAdjustMethod = "BH",
+                  pvalueCutoff  = 0.99,
+                  qvalueCutoff  = 0.99,
+                  readable      = TRUE)
+  write.csv(ego,"go0.csv")
+  return(ego)
+})
+
+barplot(ego, x = 'Count', color = 'p.adjust',showCategory=10)
+
+
+dotplot(ego,showCategory=30)
