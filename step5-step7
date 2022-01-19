@@ -3,7 +3,7 @@ library('clusterProfiler')
 library('org.Hs.eg.db')
 library('enrichplot')
 library('ggplot2')
-
+library(pheatmap)
 # construct countData
 data <- read.table('featureCounts.txt', header = TRUE)
 head(data)
@@ -20,39 +20,35 @@ dds <- DESeqDataSetFromMatrix(countData = newdata,
                               colData = name,
                               design = ~group)
 dds_out <- DESeq(dds)
-dds_vst<- vst(dds, blind = TRUE)
+#standardization
+dds_vst<- vst(dds, blind=TRUE)
 # Generate PCA plot
 plotPCA(dds_vst, intgroup = 'group')
 
 
+###draw heatmap
+rld_mat <- assay(dds_vst)  
+rld_cor <- cor(rld_mat)
+name
+pheatmap(rld_cor, annotation = name)
 #####################################################
 # 6. Differential expression analysis
 
 NonTNBC_Normal<-DESeq2::results(dds_out, contrast = c('group','NonTNBC','Normal'))
 TNBC_Normal<-DESeq2::results(dds_out, contrast = c('group','TNBC','Normal'))
 HER_Normal<-DESeq2::results(dds_out, contrast = c('group','HER','Normal'))
+TNBC_NonTNBC<-DESeq2::results(dds_out, contrast = c('group','TNBC', 'NonTNBC'))
 
 # Calculation of differentially expressed genes in the pairwise comparisons, padj<0.05
-length(which(NonTNBC_Normal$padj <= 0.05)) 
-#14646
+length(which(NonTNBC_Normal$padj <= 0.05)) #14612
 
-length(which(TNBC_Normal$padj <= 0.05))
-# 17686
+length(which(TNBC_Normal$padj <= 0.05))#17339
 
-length(which(HER_Normal$padj <= 0.05))
-# 15419
+length(which(HER_Normal$padj <= 0.05))#15343
+length(which(TNBC_NonTNBC$padj <= 0.05))#1777
+
 
 # How many of the DE genes are up-regulated and down-regulated?
-DESeq2::resultsNames(dds_out)
-
-HER_Normal <- DESeq2::results(dds_out,contrast = c('group', 'HER','Normal'))
-
-
-NonTNBC_Normal <- DESeq2::results(dds_out, c('group','NonTNBC', 'Normal'))
-
-TNBC_Normal <- DESeq2::results(dds_out, c('group','TNBC', 'Normal'))
-
-
 
 summary(HER_Normal, alpha = 0.05)
 
@@ -61,7 +57,7 @@ summary(NonTNBC_Normal, alpha = 0.05)
 summary(TNBC_Normal, alpha = 0.05)
 
 
-
+summary(TNBC_NonTNBC, alpha = 0.05)
 
 
 # Interesting genes from the paper
@@ -72,6 +68,7 @@ HRAS <- 'ENSG00000174775'
 HER_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
 TNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
 NonTNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
+TNBC_NonTNBC$log2FoldChange[(which(rownames(HER_Normal) == HRAS))]
 
 # Gene2 RAB21 
 RAB21 <- 'ENSG00000080371'
@@ -79,13 +76,14 @@ RAB21 <- 'ENSG00000080371'
 HER_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
 TNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
 NonTNBC_Normal$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
+TNBC_NonTNBC$log2FoldChange[(which(rownames(HER_Normal) == RAB21))]
 
 
 
 ##########
 # 7- Overrepresentation analysis
-# List of genes with p values above 1.0e-5 in HER_Normal
-ID <- rownames(HER_Normal[which(HER_Normal$pvalue < 1.0e-5),])
+# List of genes with p values above 1.0e-5 in TNBC_NonTNBC
+ID <- rownames(TNBC_NonTNBC[which(TNBC_NonTNBC$padj < 0.05),])
 k <- keys(org.Hs.eg.db, keytype = "ENSEMBL")
 list <- AnnotationDbi::select(org.Hs.eg.db,keys=k,columns = c("ENTREZID","SYMBOL"), keytype="ENSEMBL")
 dim(list)
@@ -95,9 +93,8 @@ ID_list = list[match(ID, list[, "ENSEMBL"]), ]
 ID_list = ID_list[complete.cases(ID_list),]
 
 
-lapply( c('BP','MF','CC') , function(ac) {
+#lapply( c('BP','MF','CC') , function(ac) {
   ego <- enrichGO(gene          = ID_list$ENTREZID,
-                  #universe      = gene_all,
                   OrgDb         = org.Hs.eg.db,
                   ont           = ac ,
                   pAdjustMethod = "BH",
@@ -108,7 +105,14 @@ lapply( c('BP','MF','CC') , function(ac) {
   return(ego)
 })
 
-barplot(ego, x = 'Count', color = 'p.adjust',showCategory=10)
 
+ego_BP <- enrichGO(gene       = ID_list$ENTREZID,
+                   OrgDb         = org.Hs.eg.db,
+                   qvalueCutoff  = 0.05,
+                   ont           = 'BP')
 
-dotplot(ego,showCategory=30)
+goplot(ego_BP, showCategory = 10, max.overlaps=30)
+
+barplot(ego_BP, x = 'Count', color = 'p.adjust',showCategory=10)
+
+dotplot(ego_BP,showCategory=30)
